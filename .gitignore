@@ -1,0 +1,16 @@
+# Data files
+data/*.txt
+
+# Model files
+models/
+
+# Python
+__pycache__/
+*.pyc
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Misc
+conversation-*.txt
+.claude/
