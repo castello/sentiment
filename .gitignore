@@ -11,6 +11,10 @@ __pycache__/
 # Jupyter
 .ipynb_checkpoints/
 
+# Frontend
+frontend/node_modules/
+frontend/dist/
+
 # Misc
 conversation-*.txt
 .claude/
