@@ -9,3 +9,7 @@ export function fetchNews(count = 50) {
 export function analyzeUrl(url) {
   return client.post('/api/analyze', { url }).then((res) => res.data);
 }
+
+export function analyzeText(text) {
+  return client.post('/api/analyze-text', { text }).then((res) => res.data);
+}

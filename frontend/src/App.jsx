@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import { ConfigProvider, Tabs, Typography, message } from 'antd';
 import koKR from 'antd/locale/ko_KR';
-import { analyzeUrl } from './api/client';
+import { analyzeUrl, analyzeText } from './api/client';
 import NewsList from './components/NewsList';
 import UrlInput from './components/UrlInput';
+import TextInput from './components/TextInput';
 import AnalysisResult from './components/AnalysisResult';
 import './App.css';
 
@@ -27,6 +28,20 @@ export default function App() {
     }
   };
 
+  const handleAnalyzeText = async (text) => {
+    setLoading(true);
+    setResult(null);
+    try {
+      const data = await analyzeText(text);
+      setResult(data);
+    } catch (err) {
+      const detail = err.response?.data?.detail || err.message;
+      message.error(`분석 실패: ${detail}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const items = [
     {
       key: 'news',
@@ -37,6 +52,11 @@ export default function App() {
       key: 'url',
       label: 'URL 직접 입력',
       children: <UrlInput onAnalyze={handleAnalyze} loading={loading} />,
+    },
+    {
+      key: 'text',
+      label: '텍스트 직접 입력',
+      children: <TextInput onAnalyze={handleAnalyzeText} loading={loading} />,
     },
   ];
 
