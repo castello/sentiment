@@ -8,6 +8,7 @@ import argparse
 import csv
 import json
 import os
+import re
 import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
@@ -75,6 +76,15 @@ def _fallback_fetch(url):
     return title, text
 
 
+# 본문 중 단독 줄로 끼어드는 페이지 잔여 텍스트 ("본문", "광고" 등)
+_NOISE_LINE = re.compile(r"^(?:본문|광고|\s)+$")
+
+
+def _strip_noise_lines(text):
+    """'본문', '광고'처럼 기사 내용이 아닌 단독 줄을 제거한다."""
+    return "\n".join(l for l in text.split("\n") if not _NOISE_LINE.match(l))
+
+
 def fetch_article(url):
     """URL에서 뉴스 기사 제목과 본문을 추출한다."""
     try:
@@ -90,6 +100,8 @@ def fetch_article(url):
     # newspaper3k 실패 시 폴백
     if not text.strip():
         title, text = _fallback_fetch(url)
+
+    text = _strip_noise_lines(text)
 
     if not text.strip():
         raise ValueError("기사 본문을 추출할 수 없습니다.")

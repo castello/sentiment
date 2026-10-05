@@ -18,8 +18,8 @@ from googlenewsdecoder import gnewsdecoder
 from pydantic import BaseModel
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
-from src.news import analyze_article
-from src.predict import load_model
+from src.news import analyze_article, split_sentences
+from src.predict import load_model, predict_sentiment
 from src.preprocess import tokenize
 
 # 전역 모델 저장소
@@ -43,6 +43,10 @@ app = FastAPI(title="뉴스 감성분석 API", lifespan=lifespan)
 
 class AnalyzeRequest(BaseModel):
     url: str
+
+
+class AnalyzeTextRequest(BaseModel):
+    text: str
 
 
 def _fetch_latest_news(n: int = 50):
@@ -80,7 +84,7 @@ def _resolve_google_news_url(url: str) -> str:
         return url
     try:
         decoded = gnewsdecoder(url)
-        if decoded.get("status"):
+        if decoded.get("success"):
             return decoded["decoded_url"]
         return url
     except Exception:
@@ -135,5 +139,51 @@ def post_analyze(req: AnalyzeRequest):
         return result
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/analyze-text")
+def post_analyze_text(req: AnalyzeTextRequest):
+    """직접 입력 텍스트 감성분석 (키워드 분석 포함)."""
+    if not req.text.strip():
+        raise HTTPException(status_code=400, detail="텍스트를 입력해주세요.")
+
+    try:
+        sentences = split_sentences(req.text)
+        if not sentences:
+            raise HTTPException(status_code=400, detail="분석할 문장이 없습니다.")
+
+        results = []
+        for sentence in sentences:
+            label, confidence = predict_sentiment(sentence, _model, _tfidf)
+            results.append({
+                "sentence": sentence,
+                "label": label,
+                "confidence": confidence,
+            })
+
+        counts = {"긍정": 0, "중립": 0, "부정": 0}
+        for r in results:
+            counts[r["label"]] += 1
+
+        total = len(results)
+        ratios = {k: v / total * 100 for k, v in counts.items()}
+        overall = max(counts, key=counts.get)
+
+        response = {
+            "title": "직접 입력 텍스트",
+            "sentences": results,
+            "summary": {
+                "total_sentences": total,
+                "counts": counts,
+                "ratios": ratios,
+                "overall": overall,
+            },
+        }
+        response["keywords"] = _extract_keywords(results)
+        return response
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
